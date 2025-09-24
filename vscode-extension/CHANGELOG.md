@@ -1,16 +1,8 @@
 # Changelog
 
-All notable changes to **EdgeCheck** will be documented here.
+All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/).
-
-## [Unreleased]
-
-### Added
-- Workspace scan command
-- Multi-language support (planned)
-
----
+### 0.1.3 (2025-09-24)
 
 ## [0.1.3] - 2025-09-23
 ### Added
