@@ -1,0 +1,76 @@
+{
+  "name": "edgecheck",
+  "displayName": "EdgeCheck",
+  "publisher": "erikherrera",
+  "version": "1.0.0",
+  "description": "Edge-case spell-check for code: finds runtime crashes with minimal repros, in real time.",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Linters",
+    "Testing"
+  ],
+  "icon": "media/icon.png",
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:python",
+    "onStartupFinished"
+  ],
+  "extensionDependencies": [
+    "ms-python.python"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "edgecheck.runFile",
+        "title": "EdgeCheck: Run on Current File"
+      }
+    ],
+    "configuration": {
+      "title": "EdgeCheck",
+      "properties": {
+        "edgecheck.pythonPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Absolute path to Python used to run the CLI. If empty, falls back to VS Code's Python interpreter or `python3`."
+        },
+        "edgecheck.budgetMs": {
+          "type": "number",
+          "default": 200,
+          "markdownDescription": "Per-call time budget (milliseconds) passed to the CLI."
+        },
+        "edgecheck.showInfo": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Show informational diagnostics (intentional guards). When off, only real crash risks appear."
+        }
+      }
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/erikherrera/edgecheck"
+  },
+  "bugs": {
+    "url": "https://github.com/erikherrera/edgecheck/issues"
+  },
+  "homepage": "https://github.com/erikherrera/edgecheck",
+  "license": "MIT",
+  "scripts": {
+    "release": "standard-version",
+    "release:minor": "standard-version --release-as minor",
+    "release:major": "standard-version --release-as major",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^2.27.0",
+    "standard-version": "^9.5.0"
+  },
+  "standard-version": {
+    "infile": "CHANGELOG.md",
+    "skip": {
+      "tag": false
+    }
+  }
+}

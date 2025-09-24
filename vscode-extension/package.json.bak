@@ -1,0 +1,36 @@
+{
+  "name": "edgecheck",
+  "displayName": "EdgeCheck",
+  "publisher": "erikherrera",
+  "version": "0.1.0",
+  "engines": { "vscode": "^1.80.0" },
+  "categories": ["Testing", "Linters"],
+  "description": "Edge-case spell-check: finds real crashes with reproducible inputs, in real time.",
+  "repository": "https://github.com/yourname/edgecheck",
+  "bugs": { "url": "https://github.com/yourname/edgecheck/issues" },
+  "homepage": "https://github.com/yourname/edgecheck",
+  "icon": "media/icon.png",
+  "activationEvents": ["onLanguage:python", "onStartupFinished"],
+  "main": "./extension.js",
+  "extensionDependencies": ["ms-python.python"],
+  "contributes": {
+    "commands": [
+      { "command": "edgecheck.runFile", "title": "EdgeCheck: Run on Current File" }
+    ],
+    "configuration": {
+      "title": "EdgeCheck",
+      "properties": {
+        "edgecheck.pythonPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Optional absolute path to Python (defaults to VS Code interpreter or `python3`)."
+        },
+        "edgecheck.budgetMs": {
+          "type": "number",
+          "default": 200,
+          "markdownDescription": "Per-call time budget in ms."
+        }
+      }
+    }
+  }
+}
