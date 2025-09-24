@@ -2,7 +2,7 @@
   "name": "edgecheck",
   "displayName": "EdgeCheck",
   "publisher": "erikherrera",
-  "version": "1.0.0",
+  "version": "0.1.3",
   "description": "Edge-case spell-check for code: finds runtime crashes with minimal repros, in real time.",
   "engines": {
     "vscode": "^1.80.0"
