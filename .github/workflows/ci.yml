@@ -8,12 +8,12 @@ on:
 
 permissions:
   contents: read
-  security-events: write   # needed to upload SARIF to Code Scanning
+  security-events: write
   actions: read
 
 jobs:
   test-python:
-    name: 🐍 Tests (Python)
+    name: Tests (Python)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -33,10 +33,9 @@ jobs:
 
       - name: Run pytest
         run: pytest -q || true
-        # If you want strict failures, remove "|| true"
 
   analyze-sarif:
-    name: 🔍 Analyze & Upload SARIF
+    name: Analyze & Upload SARIF
     needs: test-python
     runs-on: ubuntu-latest
     steps:
@@ -72,7 +71,7 @@ jobs:
           if-no-files-found: warn
 
   build-vsix:
-    name: 📦 Build VSIX (VS Code Extension)
+    name: Build VSIX (VS Code Extension)
     runs-on: ubuntu-latest
     defaults:
       run:
