@@ -1,27 +1,31 @@
 # tools/sarif_batch.py
-import argparse, fnmatch
+import argparse
+import fnmatch
+import sys
 from pathlib import Path
 
-from workers.py.runner import analyze_file
-from core.sarif import to_sarif
+# --- Ensure the repo root is importable when running from tools/ ---
+ROOT = Path(__file__).resolve().parents[1]  # .../edgecheck
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from workers.py.runner import analyze_file  # noqa: E402
+from core.sarif import to_sarif  # noqa: E402
 
 DEFAULT_INCLUDES = ["**/src/**/*.py", "**/examples/**/*.py", "target_*.py"]
 DEFAULT_EXCLUDES = [
-    "**/.venv/**","**/venv/**","**/site-packages/**","**/node_modules/**",
-    "**/dist/**","**/build/**","**/__pycache__/**","**/.git/**",
-    "**/cli/**","**/core/**","**/workers/**","**/tests/**","**/tools/**"
+    "**/.venv/**", "**/venv/**", "**/site-packages/**", "**/node_modules/**",
+    "**/dist/**", "**/build/**", "**/__pycache__/**", "**/.git/**",
+    "**/cli/**", "**/core/**", "**/workers/**", "**/tests/**", "**/tools/**"
 ]
 
 def find_python_files(root: Path, includes, excludes):
     matched = set()
-    # include-first matching
     for pat in includes:
         for p in root.rglob("*.py"):
             rel = str(p.relative_to(root))
             if fnmatch.fnmatch(rel, pat):
                 matched.add(p)
-
-    # apply excludes
     out = []
     for p in matched:
         rel = str(p.relative_to(root))
@@ -37,22 +41,20 @@ def main():
     ap.add_argument("--budget-ms", type=int, default=200)
     ap.add_argument("--max-trials", type=int, default=24)
     ap.add_argument("--max-findings", type=int, default=50)
-    ap.add_argument("--include", nargs="*", default=DEFAULT_INCLUDES, help="Glob include patterns")
-    ap.add_argument("--exclude", nargs="*", default=DEFAULT_EXCLUDES, help="Glob exclude patterns")
+    ap.add_argument("--include", nargs="*", default=DEFAULT_INCLUDES)
+    ap.add_argument("--exclude", nargs="*", default=DEFAULT_EXCLUDES)
     args = ap.parse_args()
 
     root = Path(args.root).resolve()
 
     all_findings = []
     for pyfile in find_python_files(root, args.include, args.exclude):
-        # file-level pragma to skip
         try:
             head = (pyfile.read_text(encoding="utf-8").splitlines()[:5])
             if any(line.strip().lower() == "# edgecheck: ignore-file" for line in head):
                 continue
         except Exception:
             pass
-
         try:
             fnds = analyze_file(
                 str(pyfile),
