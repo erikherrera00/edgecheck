@@ -1,0 +1,28 @@
+# Ensure consistent line endings
+* text=auto eol=lf
+
+# Treat Python as text
+*.py text diff=python
+
+# Treat JSON/YAML as text
+*.json text
+*.yml text
+*.yaml text
+
+# Ignore diffs for binary files
+*.vsix binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+
+# Python bytecode
+*.pyc binary
+*.pyo binary
+*.pyd binary
+*.so  binary
+
+# Node modules and lock files (large changes, no need for diffs)
+package-lock.json -diff
+yarn.lock -diff
