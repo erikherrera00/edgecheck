@@ -1,6 +1,8 @@
-import argparse
-from core.config import Config
+# edgecheck: ignore-file
+# cli/main.py
+import argparse, sys
 from core.diagnostics import pretty, as_json
+from core.sarif import to_sarif
 from workers.py.runner import analyze_file
 
 def write_tests(findings, out_path="tests/test_edgecheck_generated.py"):
@@ -37,28 +39,33 @@ def write_tests(findings, out_path="tests/test_edgecheck_generated.py"):
     return out_path
 
 def main():
-    ap = argparse.ArgumentParser(prog="edgecheck")
-    ap.add_argument("path", help="Python file to analyze")
+    ap = argparse.ArgumentParser()
+    ap.add_argument("path")
+    ap.add_argument("--format", choices=["pretty","json","sarif"], default="pretty")
     ap.add_argument("--budget-ms", type=int, default=200)
-    ap.add_argument("--format", choices=["pretty","json"], default="pretty")
-    ap.add_argument("--write-tests", action="store_true", help="Write pytest file from current findings")
+    ap.add_argument("--max-trials", type=int, default=24)
+    ap.add_argument("--max-findings", type=int, default=50)
+    ap.add_argument("--out", type=str, default="")
     args = ap.parse_args()
 
-    cfg = Config(budget_ms=args.budget_ms, fmt=args.format)
-    findings = analyze_file(args.path, cfg.budget_ms)
+    findings = analyze_file(args.path, args.budget_ms, args.max_trials, args.max_findings)
 
-    if cfg.fmt == "json":
-        as_json(findings)
-    else:
+    if args.format == "pretty":
         pretty(findings)
+        return
 
-    if args.write_tests:
-        out = write_tests(findings)
-        if out:
-            print(f"\n🧪 Wrote tests to {out}")
+    if args.format == "json":
+        as_json(findings)
+        return
+
+    if args.format == "sarif":
+        sarif = to_sarif(findings)
+        if args.out:
+            with open(args.out, "w", encoding="utf-8") as f:
+                f.write(sarif)
         else:
-            print("\n🧪 No findings → no tests written.")
+            print(sarif)
+        return
 
 if __name__ == "__main__":
     main()
-

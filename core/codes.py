@@ -1,50 +1,40 @@
+# core/codes.py
 from dataclasses import dataclass
 from typing import Optional
 
-@dataclass(frozen=True)
-class EdgeCode:
+@dataclass
+class Code:
     id: str
-    default_severity: str  # "error" | "warning" | "info"
     title: str
-    hint: str
+    default_severity: str = "warning"
+    hint: str = ""
 
-CODEMAP = {
-    "ZeroDivisionError": EdgeCode(
-        id="EC001", default_severity="error",
-        title="Possible division by zero",
-        hint="Check the denominator (e.g., guard with `if b == 0: ...`)."
-    ),
-    "IndexError": EdgeCode(
-        id="EC002", default_severity="error",
-        title="Index out of range",
-        hint="Guard for length or index bounds (e.g., `if len(b) <= N: ...`)."
-    ),
-    "TimeoutError": EdgeCode(
-        id="EC090", default_severity="warning",
-        title="Execution timed out",
-        hint="Function exceeded time budget; consider tightening loops or inputs."
-    ),
-}
+# Real crashes
+EC001 = Code("EC001", "Possible division by zero", "error", "Check denominator or early-return.")
+EC002 = Code("EC002", "Index may be out of range", "error", "Validate buffer length/index.")
 
-GUARD_VALUEERROR_RULES = [
-    ("denominator cannot be zero", EdgeCode(
-        id="EC101", default_severity="info",
-        title="Guarded invalid input (zero denominator)",
-        hint="This ValueError is an intentional guard. Consider documenting or returning a Result type."
-    )),
-    ("buffer too small for index 100", EdgeCode(
-        id="EC102", default_severity="info",
-        title="Guarded invalid input (buffer size)",
-        hint="This ValueError is an intentional guard. Consider documenting or validating earlier."
-    )),
-]
+# Intentional guards (info)
+EC101 = Code("EC101", "Guarded invalid input (zero denominator)", "info",
+             "This ValueError is an intentional guard. Consider documenting or returning a Result type.")
+EC102 = Code("EC102", "Guarded invalid input (buffer size)", "info",
+             "This ValueError is an intentional guard. Consider documenting or validating earlier.")
 
-def lookup_for_exception_name(name: str) -> Optional[EdgeCode]:
-    return CODEMAP.get(name)
-
-def lookup_valueerror_by_message(msg: str) -> Optional[EdgeCode]:
-    m = msg.lower()
-    for needle, ec in GUARD_VALUEERROR_RULES:
-        if needle in m:
-            return ec
+def lookup_for_exception_name(exc_name: str) -> Optional[Code]:
+    exc = (exc_name or "").split(".")[-1]
+    if exc == "ZeroDivisionError":
+        return EC001
+    if exc == "IndexError":
+        return EC002
+    if exc == "ValueError":
+        # generic ValueError (if message doesn’t match a known guard) -> treat as warning
+        return Code("EC090", "ValueError", "warning", "Review arguments and add guards.")
     return None
+
+def lookup_valueerror_by_message(msg: str) -> Optional[Code]:
+    m = (msg or "").lower()
+    if "denominator cannot be zero" in m:
+        return EC101
+    if "buffer too small for index" in m:
+        return EC102
+    return None
+

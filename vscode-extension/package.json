@@ -1,31 +1,24 @@
 {
   "name": "edgecheck",
   "displayName": "EdgeCheck",
+  "description": "Auto-generated edge case simulator and bug finder for Python. Detects crashes, edge cases, and unsafe inputs before production.",
+  "version": "0.1.5",
   "publisher": "erikherrera",
-  "version": "0.1.3",
-  "description": "Edge-case spell-check for code: finds runtime crashes with minimal repros, in real time.",
-  "engines": {
-    "vscode": "^1.80.0"
-  },
-  "categories": [
-    "Linters",
-    "Testing"
-  ],
+  "engines": { "vscode": "^1.75.0" },
+  "categories": ["Linters", "Testing", "Other"],
   "icon": "media/icon.png",
-  "main": "./extension.js",
   "activationEvents": [
-    "onLanguage:python",
-    "onStartupFinished"
+    "onStartupFinished",
+    "onLanguage:python"
   ],
-  "extensionDependencies": [
-    "ms-python.python"
-  ],
+  "main": "./extension.js",
   "contributes": {
     "commands": [
-      {
-        "command": "edgecheck.runFile",
-        "title": "EdgeCheck: Run on Current File"
-      }
+      { "command": "edgecheck.runFile", "title": "EdgeCheck: Scan Current File" },
+      { "command": "edgecheck.scanWorkspace", "title": "EdgeCheck: Scan Workspace" },
+      { "command": "edgecheck.statusMenu", "title": "EdgeCheck: Status Menu" },
+      { "command": "edgecheck.toggleShowInfo", "title": "EdgeCheck: Toggle Info Diagnostics" },
+      { "command": "edgecheck.openSarif", "title": "EdgeCheck: Open Last SARIF" }
     ],
     "configuration": {
       "title": "EdgeCheck",
@@ -33,44 +26,72 @@
         "edgecheck.pythonPath": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Absolute path to Python used to run the CLI. If empty, falls back to VS Code's Python interpreter or `python3`."
+          "description": "Path to the Python interpreter used to run EdgeCheck (falls back to python3)."
         },
         "edgecheck.budgetMs": {
           "type": "number",
           "default": 200,
-          "markdownDescription": "Per-call time budget (milliseconds) passed to the CLI."
+          "description": "Analysis budget per function in milliseconds."
         },
         "edgecheck.showInfo": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "Show informational diagnostics (intentional guards). When off, only real crash risks appear."
+          "description": "Show informational diagnostics (guarded ValueErrors, safe checks)."
+        },
+        "edgecheck.maxTrialsPerFunction": {
+          "type": "number",
+          "default": 24,
+          "description": "Max number of input trials per function."
+        },
+        "edgecheck.maxFindingsPerFile": {
+          "type": "number",
+          "default": 50,
+          "description": "Max number of findings reported per file."
+        },
+        "edgecheck.scanInclude": {
+          "type": "array",
+          "default": ["**/src/**/*.py", "**/examples/**/*.py", "target_*.py"],
+          "description": "Glob patterns to include when scanning workspace."
+        },
+        "edgecheck.scanExclude": {
+          "type": "array",
+          "default": [
+            "**/.venv/**",
+            "**/venv/**",
+            "**/site-packages/**",
+            "**/node_modules/**",
+            "**/dist/**",
+            "**/build/**",
+            "**/__pycache__/**",
+            "**/.git/**",
+            "**/cli/**",
+            "**/core/**",
+            "**/workers/**",
+            "**/tests/**",
+            "**/tools/**"
+          ],
+          "description": "Glob patterns to exclude when scanning workspace."
         }
       }
     }
   },
   "repository": {
-    "type": "git",
-    "url": "https://github.com/erikherrera/edgecheck"
-  },
-  "bugs": {
-    "url": "https://github.com/erikherrera/edgecheck/issues"
-  },
-  "homepage": "https://github.com/erikherrera/edgecheck",
-  "license": "MIT",
+  "type": "git",
+  "url": "https://github.com/erikherrera/edgecheck"
+},
+"bugs": {
+  "url": "https://github.com/erikherrera/edgecheck/issues"
+},
+"homepage": "https://github.com/erikherrera/edgecheck#readme",
+
   "scripts": {
-    "release": "standard-version",
+    "package": "vsce package",
+    "release": "standard-version && git push --follow-tags",
     "release:minor": "standard-version --release-as minor",
-    "release:major": "standard-version --release-as major",
-    "package": "vsce package"
+    "release:major": "standard-version --release-as major"
   },
   "devDependencies": {
-    "@vscode/vsce": "^2.27.0",
+    "@vscode/vsce": "^2.25.0",
     "standard-version": "^9.5.0"
-  },
-  "standard-version": {
-    "infile": "CHANGELOG.md",
-    "skip": {
-      "tag": false
-    }
   }
 }
