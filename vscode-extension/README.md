@@ -1,6 +1,9 @@
 # EdgeCheck
 
-**Auto-generated edge case simulator and bug finder for Python.**
+[![EdgeCheck CI](https://github.com/erikherrera00/edgecheck/actions/workflows/ci.yml/badge.svg)](https://github.com/erikherrera00/edgecheck/actions/workflows/ci.yml)
+
+Auto-generated edge case simulator and bug finder for Python. Detects crashes, edge cases, and unsafe inputs before production.
+
 
 EdgeCheck runs your functions under randomized and structured inputs to uncover hidden crashes, unsafe edge cases, and missed guards. It integrates directly into VS Code so you see squiggles, quick fixes, and hover details without leaving the editor.
 
