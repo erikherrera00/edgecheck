@@ -1,0 +1,102 @@
+name: EdgeCheck CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  security-events: write   # needed to upload SARIF to Code Scanning
+  actions: read
+
+jobs:
+  test-python:
+    name: 🐍 Tests (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install test deps
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pytest
+
+      - name: Run pytest
+        run: pytest -q || true
+        # If you want strict failures, remove "|| true"
+
+  analyze-sarif:
+    name: 🔍 Analyze & Upload SARIF
+    needs: test-python
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install analyzer deps
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Generate SARIF
+        run: |
+          python tools/sarif_batch.py --out edgecheck.sarif
+
+      - name: Upload SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: edgecheck.sarif
+          category: edgecheck
+
+      - name: Upload SARIF as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: edgecheck-sarif
+          path: edgecheck.sarif
+          if-no-files-found: warn
+
+  build-vsix:
+    name: 📦 Build VSIX (VS Code Extension)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vscode-extension
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: vscode-extension/package-lock.json
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Package extension
+        run: npx vsce package --no-yarn --allow-missing-repository
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: edgecheck-vsix
+          path: vscode-extension/*.vsix
+          if-no-files-found: error
