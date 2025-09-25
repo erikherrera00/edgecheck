@@ -6,12 +6,10 @@ name: EdgeCheck CI
     branches: [main]
   pull_request:
     branches: [main]
-
 permissions:
   contents: read
   security-events: write
   actions: read
-
 jobs:
   test-python:
     name: Tests (Python)
@@ -31,7 +29,6 @@ jobs:
           pip install pytest
       - name: Run pytest
         run: pytest -q || true
-
   analyze-sarif:
     name: Analyze & Upload SARIF
     needs: test-python
@@ -61,7 +58,6 @@ jobs:
           name: edgecheck-sarif
           path: edgecheck.sarif
           if-no-files-found: warn
-
   build-vsix:
     name: Build VSIX (VS Code Extension)
     runs-on: ubuntu-latest
@@ -87,4 +83,3 @@ jobs:
           name: edgecheck-vsix
           path: vscode-extension/*.vsix
           if-no-files-found: error
-
