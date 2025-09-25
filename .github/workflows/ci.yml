@@ -47,6 +47,8 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Generate SARIF
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: python tools/sarif_batch.py --out edgecheck.sarif
       - name: Upload SARIF to GitHub Code Scanning
         uses: github/codeql-action/upload-sarif@v3
