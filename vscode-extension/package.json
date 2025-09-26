@@ -2,11 +2,43 @@
   "name": "edgecheck",
   "displayName": "EdgeCheck",
   "description": "Auto-generated edge case simulator and bug finder for Python. Detects crashes, edge cases, and unsafe inputs before production.",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "publisher": "erikherrera",
-  "engines": { "vscode": "^1.75.0" },
-  "categories": ["Linters", "Testing", "Other"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/erikherrera00/edgecheck"
+  },
+  "bugs": {
+    "url": "https://github.com/erikherrera00/edgecheck/issues"
+  },
+  "homepage": "https://github.com/erikherrera00/edgecheck#readme",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Linters",
+    "Testing",
+    "Other"
+  ],
+  "keywords": [
+    "python",
+    "testing",
+    "fuzzing",
+    "edge cases",
+    "security",
+    "education",
+    "students"
+  ],
+  "galleryBanner": {
+    "color": "#0b1529",
+    "theme": "dark"
+  },
+  "qna": "marketplace",
   "icon": "media/icon.png",
+  "extensionDependencies": [
+    "ms-python.python"
+  ],
   "activationEvents": [
     "onStartupFinished",
     "onLanguage:python"
@@ -14,11 +46,26 @@
   "main": "./extension.js",
   "contributes": {
     "commands": [
-      { "command": "edgecheck.runFile", "title": "EdgeCheck: Scan Current File" },
-      { "command": "edgecheck.scanWorkspace", "title": "EdgeCheck: Scan Workspace" },
-      { "command": "edgecheck.statusMenu", "title": "EdgeCheck: Status Menu" },
-      { "command": "edgecheck.toggleShowInfo", "title": "EdgeCheck: Toggle Info Diagnostics" },
-      { "command": "edgecheck.openSarif", "title": "EdgeCheck: Open Last SARIF" }
+      {
+        "command": "edgecheck.runFile",
+        "title": "EdgeCheck: Scan Current File"
+      },
+      {
+        "command": "edgecheck.scanWorkspace",
+        "title": "EdgeCheck: Scan Workspace"
+      },
+      {
+        "command": "edgecheck.statusMenu",
+        "title": "EdgeCheck: Status Menu"
+      },
+      {
+        "command": "edgecheck.toggleShowInfo",
+        "title": "EdgeCheck: Toggle Info Diagnostics"
+      },
+      {
+        "command": "edgecheck.openSarif",
+        "title": "EdgeCheck: Open Last SARIF"
+      }
     ],
     "configuration": {
       "title": "EdgeCheck",
@@ -50,7 +97,11 @@
         },
         "edgecheck.scanInclude": {
           "type": "array",
-          "default": ["**/src/**/*.py", "**/examples/**/*.py", "target_*.py"],
+          "default": [
+            "**/src/**/*.py",
+            "**/examples/**/*.py",
+            "target_*.py"
+          ],
           "description": "Glob patterns to include when scanning workspace."
         },
         "edgecheck.scanExclude": {
@@ -71,27 +122,25 @@
             "**/tools/**"
           ],
           "description": "Glob patterns to exclude when scanning workspace."
+        },
+        "edgecheck.enableCloud": {
+          "type": "boolean",
+          "default": false,
+          "description": "Reserved for future: enable cloud features (off for EDU)."
         }
       }
     }
   },
-  "repository": {
-  "type": "git",
-  "url": "https://github.com/erikherrera/edgecheck"
-},
-"bugs": {
-  "url": "https://github.com/erikherrera/edgecheck/issues"
-},
-"homepage": "https://github.com/erikherrera/edgecheck#readme",
-
   "scripts": {
+    "build:icon": "node scripts/make-icon.js",
     "package": "vsce package",
     "release": "standard-version && git push --follow-tags",
     "release:minor": "standard-version --release-as minor",
     "release:major": "standard-version --release-as major"
   },
   "devDependencies": {
-    "@vscode/vsce": "^2.25.0",
+    "@vscode/vsce": "^2.32.0",
+    "sharp": "^0.33.5",
     "standard-version": "^9.5.0"
   }
 }
