@@ -8,8 +8,14 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+
+    # Expose the secret as an env var for the whole job
+    env:
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -34,9 +40,8 @@ jobs:
           name: edgecheck-vsix
           path: vscode-extension/*.vsix
 
+      # Only publish if VSCE_PAT exists (prevents failures on forks)
       - name: Publish to Marketplace
-        if: ${{ secrets.VSCE_PAT != '' }}
+        if: ${{ env.VSCE_PAT != '' }}
         working-directory: vscode-extension
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: npx vsce publish -p "$VSCE_PAT"
