@@ -2,145 +2,99 @@
   "name": "edgecheck",
   "displayName": "EdgeCheck",
   "description": "Auto-generated edge case simulator and bug finder for Python. Detects crashes, edge cases, and unsafe inputs before production.",
-  "version": "0.1.6",
+  "version": "0.2.8",
   "publisher": "erikherrera",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/erikherrera00/edgecheck"
-  },
-  "bugs": {
-    "url": "https://github.com/erikherrera00/edgecheck/issues"
-  },
+  "repository": { "type": "git", "url": "https://github.com/erikherrera00/edgecheck" },
+  "bugs": { "url": "https://github.com/erikherrera00/edgecheck/issues" },
   "homepage": "https://github.com/erikherrera00/edgecheck#readme",
-  "engines": {
-    "vscode": "^1.75.0"
-  },
-  "categories": [
-    "Linters",
-    "Testing",
-    "Other"
-  ],
-  "keywords": [
-    "python",
-    "testing",
-    "fuzzing",
-    "edge cases",
-    "security",
-    "education",
-    "students"
-  ],
-  "galleryBanner": {
-    "color": "#0b1529",
-    "theme": "dark"
-  },
+  "engines": { "vscode": "^1.75.0" },
+  "categories": ["Linters", "Testing", "Other"],
+  "keywords": ["python", "testing", "fuzzing", "edge cases", "security", "education", "students"],
+  "galleryBanner": { "color": "#0b1529", "theme": "dark" },
   "qna": "marketplace",
   "icon": "media/icon.png",
-  "extensionDependencies": [
-    "ms-python.python"
-  ],
+  "extensionDependencies": ["ms-python.python"],
+  "main": "./dist/extension.js",
   "activationEvents": [
-    "onStartupFinished",
-    "onLanguage:python"
+    "onLanguage:python",
+    "onStartupFinished"
   ],
-  "main": "./extension.js",
   "contributes": {
     "commands": [
-      {
-        "command": "edgecheck.runFile",
-        "title": "EdgeCheck: Scan Current File"
-      },
-      {
-        "command": "edgecheck.scanWorkspace",
-        "title": "EdgeCheck: Scan Workspace"
-      },
-      {
-        "command": "edgecheck.statusMenu",
-        "title": "EdgeCheck: Status Menu"
-      },
-      {
-        "command": "edgecheck.toggleShowInfo",
-        "title": "EdgeCheck: Toggle Info Diagnostics"
-      },
-      {
-        "command": "edgecheck.openSarif",
-        "title": "EdgeCheck: Open Last SARIF"
-      }
+      { "command": "edgecheck.runFile", "title": "EdgeCheck: Scan Current File" },
+      { "command": "edgecheck.scanWorkspace", "title": "EdgeCheck: Scan Workspace" },
+      { "command": "edgecheck.fixAllInCurrentFile", "title": "EdgeCheck: Fix All Guards in Current File" },
+      { "command": "edgecheck.applyEduPreset", "title": "EdgeCheck: Apply EDU Preset (Workspace)" },
+      { "command": "edgecheck.insertSample", "title": "EdgeCheck: Insert Sample Snippet" },
+      { "command": "edgecheck.showOutput", "title": "EdgeCheck: Show Output" },
+      { "command": "edgecheck.clearDiagnostics", "title": "EdgeCheck: Clear All Diagnostics" },
+      { "command": "edgecheck.focusProblems", "title": "EdgeCheck: Focus Problems View" },
+      { "command": "edgecheck.resetProblemsFilters", "title": "EdgeCheck: Reset Problems Filters" },
+      { "command": "edgecheck.dumpDiagnostics", "title": "EdgeCheck: Dump Diagnostics to Output" },
+      { "command": "edgecheck.pickAndOpenProblem", "title": "EdgeCheck: Pick & Open Problem" }
     ],
+    "menus": {
+      "editor/context": [
+        {
+          "when": "resourceExtname == .py",
+          "command": "edgecheck.runFile",
+          "group": "navigation@1"
+        },
+        {
+          "when": "resourceExtname == .py",
+          "command": "edgecheck.fixAllInCurrentFile",
+          "group": "navigation@2"
+        },
+        {
+          "when": "editorLangId == python",
+          "command": "edgecheck.insertSample",
+          "group": "navigation@9"
+        }
+      ],
+      "explorer/context": [
+        {
+          "when": "resourceExtname == .py",
+          "command": "edgecheck.runFile",
+          "group": "navigation@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "edgecheck.fixAllInCurrentFile",
+          "when": "editorLangId == python"
+        },
+        {
+          "command": "edgecheck.applyEduPreset"
+        },
+        {
+          "command": "edgecheck.insertSample"
+        }
+      ]
+    },
     "configuration": {
       "title": "EdgeCheck",
       "properties": {
-        "edgecheck.pythonPath": {
-          "type": "string",
-          "default": "",
-          "description": "Path to the Python interpreter used to run EdgeCheck (falls back to python3)."
-        },
-        "edgecheck.budgetMs": {
-          "type": "number",
-          "default": 200,
-          "description": "Analysis budget per function in milliseconds."
-        },
-        "edgecheck.showInfo": {
-          "type": "boolean",
-          "default": false,
-          "description": "Show informational diagnostics (guarded ValueErrors, safe checks)."
-        },
-        "edgecheck.maxTrialsPerFunction": {
-          "type": "number",
-          "default": 24,
-          "description": "Max number of input trials per function."
-        },
-        "edgecheck.maxFindingsPerFile": {
-          "type": "number",
-          "default": 50,
-          "description": "Max number of findings reported per file."
-        },
-        "edgecheck.scanInclude": {
-          "type": "array",
-          "default": [
-            "**/src/**/*.py",
-            "**/examples/**/*.py",
-            "target_*.py"
-          ],
-          "description": "Glob patterns to include when scanning workspace."
-        },
-        "edgecheck.scanExclude": {
-          "type": "array",
-          "default": [
-            "**/.venv/**",
-            "**/venv/**",
-            "**/site-packages/**",
-            "**/node_modules/**",
-            "**/dist/**",
-            "**/build/**",
-            "**/__pycache__/**",
-            "**/.git/**",
-            "**/cli/**",
-            "**/core/**",
-            "**/workers/**",
-            "**/tests/**",
-            "**/tools/**"
-          ],
-          "description": "Glob patterns to exclude when scanning workspace."
-        },
-        "edgecheck.enableCloud": {
-          "type": "boolean",
-          "default": false,
-          "description": "Reserved for future: enable cloud features (off for EDU)."
-        }
+        "edgecheck.pythonPath": { "type": "string", "default": "", "description": "Path to the Python interpreter used to run EdgeCheck (falls back to python3)." },
+        "edgecheck.budgetMs": { "type": "number", "default": 200, "description": "Analysis budget per function in milliseconds." },
+        "edgecheck.showInfo": { "type": "boolean", "default": false, "description": "Show informational diagnostics (guarded ValueErrors, safe checks)." },
+        "edgecheck.maxTrialsPerFunction": { "type": "number", "default": 24, "description": "Max number of input trials per function." },
+        "edgecheck.maxFindingsPerFile": { "type": "number", "default": 50, "description": "Max number of findings reported per file." },
+        "edgecheck.quickFix.nearbyLines": { "type": "number", "default": 2, "description": "Also offer Quick Fixes for diagnostics within this many lines of the caret." },
+        "edgecheck.zeroGuardMessage": { "type": "string", "default": "denominator cannot be zero", "description": "Message used by the EC001 zero-denominator Quick Fix." },
+        "edgecheck.autoScanOnSave": { "type": "boolean", "default": false, "description": "Automatically scan the current Python file on save." },
+        "edgecheck.hideTimeouts": { "type": "boolean", "default": true, "description": "Hide timeout/budget-exceeded findings in Problems." },
+        "edgecheck.coalesceOverlapping": { "type": "boolean", "default": true, "description": "Merge overlapping/nearby EdgeCheck diagnostics on the same line into one squiggle." }
       }
     }
   },
   "scripts": {
-    "build:icon": "node scripts/make-icon.js",
-    "package": "vsce package",
-    "release": "standard-version && git push --follow-tags",
-    "release:minor": "standard-version --release-as minor",
-    "release:major": "standard-version --release-as major"
+    "bundle": "node scripts/bundle.js",
+    "dev": "node scripts/dev.js",
+    "package": "npm run bundle && vsce package"
   },
   "devDependencies": {
-    "@vscode/vsce": "^2.32.0",
-    "sharp": "^0.33.5",
-    "standard-version": "^9.5.0"
+    "@vscode/vsce": "^3.6.1",
+    "esbuild": "^0.23.0"
   }
 }

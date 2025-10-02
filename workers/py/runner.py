@@ -4,22 +4,54 @@ from __future__ import annotations
 import ast
 import importlib.util
 import inspect
+import time
+import json
+import contextlib
+import io
+import sys
 import itertools
 import multiprocessing as mp
 import os
 import traceback
+import math
+import fnmatch
+import random
 from typing import Any, Dict, List, Tuple, Optional, get_origin, get_args
-
+from typing import get_origin, get_args, Any, Optional, Union
+from multiprocessing import Process, Pipe
 from core.codes import lookup_for_exception_name, lookup_valueerror_by_message
 
 # --------------------------------------------------------------------
 # Public decorator to ignore a specific function at analysis time
 # --------------------------------------------------------------------
+def _load_ignore_patterns(root: str) -> list[str]:
+    p = os.path.join(root, ".edgecheckignore")
+    if not os.path.isfile(p):
+        return []
+    with open(p, "r", encoding="utf-8") as f:
+        pats = [ln.strip() for ln in f if ln.strip() and not ln.strip().startswith("#")]
+    return pats
+
+def _is_ignored(path: str, root: str, patterns: list[str]) -> bool:
+    rel = os.path.relpath(path, root)
+    # support both dir/ pattern and glob patterns
+    for pat in patterns:
+        if pat.endswith("/"):
+            # directory prefix ignore
+            if rel == pat[:-1] or rel.startswith(pat):
+                return True
+        if fnmatch.fnmatch(rel, pat):
+            return True
+    return False
+
 def edgecheck_ignore(func):
     """Decorator: mark a function to be ignored by EdgeCheck."""
     setattr(func, "__edgecheck_ignore__", True)
     return func
-
+try:
+    MPCTX = mp.get_context("fork")
+except ValueError:
+    MPCTX = mp.get_context()
 # --------------------------------------------------------------------
 # Module loading
 # --------------------------------------------------------------------
@@ -102,55 +134,64 @@ def _values_for_annotation(ann: Any) -> List[Any]:
 # --------------------------------------------------------------------
 # Subprocess runner with timeout
 # --------------------------------------------------------------------
-def _runner(child_conn, path: str, func_name: str, args: List[Any], kwargs: Dict[str, Any]) -> None:
-    """Executed in a child process: import target, run func, report back."""
+def _runner(target_path: str, fn_name: str, args, kwargs, conn):
+    """
+    Run a single function from target_path in a clean globals dict so no symbols
+    (like 'path') leak into the module namespace.
+    """
     try:
-        mod = load_module_from_path(path)
-        fn = getattr(mod, func_name)
-        fn(*args, **kwargs)  # execute target
-        child_conn.send((True, "", ""))  # ok
+        # Read source
+        with open(target_path, "r", encoding="utf-8") as f:
+            src = f.read()
+
+        # Compile and exec in a FRESH globals dict
+        g = {
+            "__name__": "__edgecheck_target__",
+            "__file__": target_path,
+            "__package__": None,
+            "__builtins__": __builtins__,
+        }
+        code = compile(src, target_path, "exec")
+        exec(code, g, g)  # module-level code runs here, isolated
+
+        # Look up the function
+        if fn_name not in g or not callable(g[fn_name]):
+            conn.send((
+                False,
+                f"AttributeError: function {fn_name} not found in {target_path}",
+                ""
+            ))
+            return
+
+        # Call it
+        g[fn_name](*args, **kwargs)
+
+        # Success
+        conn.send((True, "", ""))
     except Exception as e:
         tb = traceback.format_exc()
-        msg = f"{e.__class__.__name__}: {e}"
-        child_conn.send((False, msg, tb))
-    finally:
-        try:
-            child_conn.close()
-        except Exception:
-            pass
+        conn.send((False, f"{e.__class__.__name__}: {e}", tb))
 
-def _call_with_timeout(path: str, func_name: str, args: List[Any], kwargs: Dict[str, Any], budget_ms: int):
-    """Spawn a child process to run the function, enforcing a wall-clock timeout."""
-    parent_conn, child_conn = mp.Pipe(duplex=False)
-    p = mp.Process(target=_runner, args=(child_conn, path, func_name, args, kwargs))
+def _call_with_timeout(target_path, fn_name, args, kwargs, budget_ms):
+    parent_conn, child_conn = Pipe(duplex=False)
+    p = Process(target=_runner, args=(os.path.abspath(target_path), fn_name, args, kwargs, child_conn))
     p.start()
-    p.join(budget_ms / 1000.0)
+    child_conn.close()
+    p.join(timeout=budget_ms / 1000.0)
 
     if p.is_alive():
-        try:
-            p.terminate()
-        except Exception:
-            pass
-        try:
-            p.join(0.2)
-        except Exception:
-            pass
-        try:
-            parent_conn.close()
-        except Exception:
-            pass
-        return (False, "TimeoutError: execution exceeded budget", "")
+        p.terminate()
+        p.join(0.1)
+        return False, "TimeoutError: budget exceeded", ""
 
-    ok, msg, stack = (True, "", "")
-    try:
-        if parent_conn.poll():
-            ok, msg, stack = parent_conn.recv()
-    finally:
-        try:
-            parent_conn.close()
-        except Exception:
-            pass
-    return (ok, msg, stack)
+    if parent_conn.poll():
+        ok, msg, tb = parent_conn.recv()
+    else:
+        ok, msg, tb = False, "RuntimeError: no result from child", ""
+    parent_conn.close()
+    return ok, msg, tb
+
+
 
 # --------------------------------------------------------------------
 # AST utilities for precise ranges
@@ -230,6 +271,51 @@ def _extract_line_from_stack(stack: str, path: str, default_line: int) -> int:
                 pass
     return line_num
 
+def _some_bytes_of_len(n: int) -> bytes:
+    return bytes([i % 256 for i in range(n)])
+
+def _values_for_annotation(ann) -> list:
+    """Return candidate values for a type annotation."""
+    origin = get_origin(ann)
+    args = get_args(ann)
+
+    # Optional[T] or Union[T, None]
+    if origin is Union and type(None) in args:
+        inner = [a for a in args if a is not type(None)]
+        base = _values_for_annotation(inner[0]) if inner else [None]
+        return [None] + base
+
+    if ann in (int,):
+        return [0, 1, -1, 2, -2, 10**9, -10**9]
+    if ann in (float,):
+        return [0.0, -0.0, 1.0, -1.0, 1e308, -1e308, float('inf'), float('-inf'), float('nan')]
+    if ann in (bool,):
+        return [False, True]
+    if ann in (str,):
+        long = "x" * 256
+        unicodey = "ñö🦄"
+        return ["", "a", "0", "-1", long, unicodey]
+    if ann in (bytes, bytearray):
+        return [b"", b"\x00", _some_bytes_of_len(50), _some_bytes_of_len(100), _some_bytes_of_len(101)]
+    if ann in (list,):
+        return [[], [0], [1,2,3]]
+    if ann in (tuple,):
+        return [(), (0,), (1,2)]
+    if ann in (dict,):
+        return [{}, {"k":"v"}, {0:1}]
+    if ann is Any:
+        return [None, 0, 1, "", "x", b"", _some_bytes_of_len(100)]
+    # Unknown/other annotation → fall back
+    return []
+
+FALLBACKS = [
+    None,
+    0, 1, -1, 2, -2,
+    0.0, -0.0, 1.0, -1.0, float('inf'), float('-inf'), float('nan'),
+    "", "a", "0",
+    b"", _some_bytes_of_len(100), _some_bytes_of_len(101),
+    [], [0], (), (0,), {}, {"k": "v"}, True, False,
+]
 # --------------------------------------------------------------------
 # Main analyzer
 # --------------------------------------------------------------------

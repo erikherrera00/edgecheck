@@ -1,0 +1,17 @@
+# Ignore EdgeCheck engine & infra
+cli/
+core/
+workers/
+tests/
+tools/
+.vscode/
+.vscode-test/
+.vscode-insiders/
+.vscode-extension/
+node_modules/
+.venv/
+venv/
+__pycache__/
+site-packages/
+dist/
+build/

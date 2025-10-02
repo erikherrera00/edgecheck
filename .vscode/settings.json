@@ -1,3 +1,5 @@
 {
-    "edgecheck.pythonPath": ""
+    "edgecheck.pythonPath": "",
+    "edgecheck.showInfo": true,
+    "edgecheck.autoScanOnSave": true
 }

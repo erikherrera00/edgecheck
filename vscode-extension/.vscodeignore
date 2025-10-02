@@ -1,0 +1,10 @@
+# Ignore everything by default
+*
+
+# Keep only distribution files
+!dist/**
+!media/**
+!package.json
+!README.md
+!CHANGELOG.md
+!LICENSE

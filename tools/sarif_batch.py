@@ -1,77 +1,54 @@
 # tools/sarif_batch.py
-import argparse
-import fnmatch
-import sys
+import argparse, json, os, sys
 from pathlib import Path
 
-# --- Ensure the repo root is importable when running from tools/ ---
-ROOT = Path(__file__).resolve().parents[1]  # .../edgecheck
+# --- Ensure repo root is on sys.path so 'workers', 'core', 'cli' import ---
+ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from workers.py.runner import analyze_file  # noqa: E402
-from core.sarif import to_sarif  # noqa: E402
+from workers.py.runner import analyze_file  # now resolvable after sys.path tweak
+from core.sarif import to_sarif
 
-DEFAULT_INCLUDES = ["**/src/**/*.py", "**/examples/**/*.py", "target_*.py"]
-DEFAULT_EXCLUDES = [
-    "**/.venv/**", "**/venv/**", "**/site-packages/**", "**/node_modules/**",
-    "**/dist/**", "**/build/**", "**/__pycache__/**", "**/.git/**",
-    "**/cli/**", "**/core/**", "**/workers/**", "**/tests/**", "**/tools/**"
-]
+SKIP_DIRS = {
+    '.git', '.venv', 'venv', '__pycache__', 'node_modules',
+    'dist', 'build', 'site-packages', 'vscode-extension',
+    # exclude EdgeCheck engine code from scans
+    'cli', 'core', 'workers', 'tests', 'tools'
+}
 
-def find_python_files(root: Path, includes, excludes):
-    matched = set()
-    for pat in includes:
-        for p in root.rglob("*.py"):
-            rel = str(p.relative_to(root))
-            if fnmatch.fnmatch(rel, pat):
-                matched.add(p)
-    out = []
-    for p in matched:
-        rel = str(p.relative_to(root))
-        if any(fnmatch.fnmatch(rel, ex) for ex in excludes):
-            continue
-        out.append(p)
-    return out
+def iter_python_files(root: Path):
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        for f in filenames:
+            if f.endswith('.py'):
+                yield Path(dirpath) / f
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--root", default=".", help="Repo root to scan")
-    ap.add_argument("--out", default="edgecheck.sarif", help="SARIF output path")
-    ap.add_argument("--budget-ms", type=int, default=200)
-    ap.add_argument("--max-trials", type=int, default=24)
-    ap.add_argument("--max-findings", type=int, default=50)
-    ap.add_argument("--include", nargs="*", default=DEFAULT_INCLUDES)
-    ap.add_argument("--exclude", nargs="*", default=DEFAULT_EXCLUDES)
+    ap.add_argument('--out', required=True)
+    ap.add_argument('--budget-ms', type=int, default=200)
+    ap.add_argument('--max-trials', type=int, default=24)
+    ap.add_argument('--max-findings', type=int, default=50)
     args = ap.parse_args()
 
-    root = Path(args.root).resolve()
+    root = ROOT
+    targets = list(iter_python_files(root))
+    print(f"[edgecheck] scanning {len(targets)} Python files from {root}")
 
     all_findings = []
-    for pyfile in find_python_files(root, args.include, args.exclude):
+    for p in targets:
         try:
-            head = (pyfile.read_text(encoding="utf-8").splitlines()[:5])
-            if any(line.strip().lower() == "# edgecheck: ignore-file" for line in head):
-                continue
-        except Exception:
-            pass
-        try:
-            fnds = analyze_file(
-                str(pyfile),
-                budget_ms=args.budget_ms,
-                max_trials_per_fn=args.max_trials,
-                max_findings_per_file=args.max_findings
-            )
-            if fnds:
-                all_findings.extend(fnds)
+            findings = analyze_file(str(p), args.budget_ms, args.max_trials, args.max_findings)
+            if findings:
+                all_findings.extend(findings)
         except Exception as e:
-            print(f"[edgecheck] error analyzing {pyfile}: {e}")
+            sys.stderr.write(f"[edgecheck] error on {p}: {e}\n")
 
     sarif = to_sarif(all_findings)
-    out_path = Path(args.out).resolve()
-    out_path.write_text(sarif, encoding="utf-8")
-    print(f"[edgecheck] wrote SARIF: {out_path}")
+    out_path = Path(args.out)
+    out_path.write_text(json.dumps(sarif, indent=2))
+    print(f"[edgecheck] wrote SARIF: {out_path.resolve()}")
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
-
